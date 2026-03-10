@@ -7,10 +7,10 @@ import ArchV4 from "../docs/arch_v4.jsx";
 function getInitialView() {
   if (typeof window === "undefined") return "incident";
   const hash = window.location.hash.replace("#", "");
-  if (hash === "arch" || hash === "ecosystem" || hash === "incident") return hash;
+  if (hash === "arch" || hash === "view1-ecosystem" || hash === "incident") return hash;
   const params = new URLSearchParams(window.location.search);
   const qp = params.get("view");
-  if (qp === "arch" || qp === "ecosystem" || qp === "incident") return qp;
+  if (qp === "arch" || qp === "view1-ecosystem" || qp === "incident") return qp;
   return "incident";
 }
 
@@ -41,9 +41,9 @@ function App() {
         }}
       >
         {[
-          { id: "incident", label: "Demo (Incident Explorer)" },
-          { id: "arch", label: "Reference (Architecture v3)" },
-          { id: "ecosystem", label: "Ecosystem View (arch_v4)" },
+          { id: "incident", label: "View 3 · Incident Explorer" },
+          { id: "arch", label: "View 2 · Reference Architecture" },
+          { id: "view1-ecosystem", label: "View 1 · Ecosystem (arch_v4)" },
         ].map((v) => (
           <button
             key={v.id}
