@@ -60,58 +60,58 @@ const ENTITIES = [
     x: 80, y: 310, w: 170, h: 72,
     zone: "supply",
     contribution:
-      "Signs the PROVIDER, MODEL, and INCIDENT RESPONSE sections. For this scenario, MedBot SG records its organization name, a security contact, the exact model in use, and an incident-response endpoint/SLA the polyclinic can rely on.",
+      "Signs the PROVIDER, MODEL, and INCIDENT RESPONSE sections. For this scenario, MedBot SG attests to four claims: who they are (a stable provider identifier in the registry), how to reach their security team, whether this agent session can be shut down remotely, and which model/version is running. The first three are the provider\u2019s own contributions; the model fields originate with the developer but become verifiable when MedBot SG signs them.",
     benefitsActor: [
       {
-        title: "Trusted access to clinic APIs",
+        title: "Access to sensitive APIs",
         detail:
-          "By standing behind the agent with a name, contact, and incident endpoint, MedBot SG becomes eligible for direct integrations with polyclinic systems that would otherwise reject anonymous agents.",
+          "Polyclinic systems can require signed provider identity and refuse anonymous or unverifiable agents. By attesting to who they are and how to reach them, MedBot SG becomes eligible for integrations with appointment and patient-facing endpoints that would otherwise be closed.",
       },
       {
-        title: "Scoped blast radius in failures",
+        title: "Scoped mitigations when things go wrong",
         detail:
-          "If something goes wrong, the polyclinic can target mitigations to MedBot SG\u2019s product instead of blocking all traffic from shared infrastructure, limiting collateral damage to other customers.",
+          "If a booking incident occurs, the provider signature lets the polyclinic target mitigations to MedBot SG\u2019s product specifically instead of blocking all traffic from shared infrastructure, which would affect other providers\u2019 agents and their customers.",
       },
     ],
     benefitsEcosystem: [
       {
-        title: "Who to call when bookings misbehave",
+        title: "Reachable provider, not just an IP address",
         detail:
-          "Provider identity and incident details give the polyclinic a concrete team to reach when appointment availability is being scraped or misused, instead of only having an IP address.",
+          "Provider identity plus a security contact and incident endpoint give the polyclinic a concrete team to call when appointment availability is scraped or misused. Without these fields, the only response is blocking an IP address, which may also disrupt unrelated services running on the same infrastructure.",
       },
       {
-        title: "Model version traceability",
+        title: "Targeted model-level response",
         detail:
-          "When a vulnerability is found in a specific model version, the provider\u2019s attestation lets services and regulators identify which deployed agents in healthcare are affected and coordinate upgrades.",
+          "When a vulnerability is found in a specific model version, the provider-signed MODEL fields let services and regulators identify exactly which deployed agents in healthcare are affected and coordinate upgrades (for example, notifying all deployers running v3.2.1) instead of issuing precautionary blanket blocks.",
       },
     ],
   },
   {
     id: "deployer",
     label: "Deployer",
-    desc: "Configures and launches the agent (Singpass-verified).",
+    desc: "Configures and launches the agent.",
     color: C.orange,
     x: 80, y: 200, w: 170, h: 72,
     zone: "supply",
     contribution:
-      "Signs the DEPLOYER and CAPABILITIES sections. Here, Raffles Medical records its Singpass-verified UEN and declares that this agent may read and book appointments (but not touch full visit histories), together with its autonomy level.",
+      "Signs the DEPLOYER and CAPABILITIES sections. Raffles Medical signs a claim that this MedBot SG deployment is acting on its behalf. That claim carries a verified organizational anchor (such as a government-issued entity number), so the service can distinguish a known healthcare institution from an anonymous caller. It also carries the deployment\u2019s declared capability scope: this agent may read appointment availability and book slots, but not access clinical histories or billing records. This claim is tied to the provider\u2019s signed record, so it cannot be reused with a different product.",
     benefitsActor: [
       {
-        title: "Eligibility for richer data",
+        title: "Access requires accountability",
         detail:
-          "By identifying itself, Raffles Medical can be granted access to detailed appointment availability for its patients that anonymous deployers would never see.",
+          "If polyclinics reserve richer scheduling APIs for identified healthcare organizations, Raffles Medical gains an integration path that anonymous deployers cannot use. Because deployer identity has weak natural disclosure incentives, participation usually depends on demand-side pressure from services or governance requirements.",
       },
     ],
     benefitsEcosystem: [
       {
-        title: "Accountability for configuration",
+        title: "Not all deployments are equal",
         detail:
-          "If the agent starts querying appointment data far beyond a patient\u2019s needs, the polyclinic and regulator know exactly which institution configured it and can respond proportionately.",
+          "Without deployer identity, every MedBot SG deployment looks the same to the polyclinic: it knows which product is calling, but not which organization configured it. The service cannot grant access proportionately or isolate a misbehaving deployment without affecting others.",
       },
       {
-        title: "Scope checks at the API boundary",
+        title: "Scope prevents bad defaults",
         detail:
-          "Declared tools let the polyclinic compare what the agent says it is allowed to do with the actual API call. Attempts to fetch diagnosis histories using an agent declared for \"appointment_booking\" are immediately suspect.",
+          "Without declared scope, the service is pushed toward two bad options: grant broader API access than necessary, or deny useful agents entirely because it cannot distinguish appointment booking from broader unjustified access.",
       },
     ],
   },
@@ -123,19 +123,19 @@ const ENTITIES = [
     x: 305, y: 200, w: 210, h: 88,
     zone: "core",
     contribution:
-      "Creates the INSTANCE section at runtime: a session ID (UUID) and a declared purpose such as \"appointment_booking\". These fields are self-asserted and unsigned. The agent also carries, but does not author, the signed sections from other actors.",
+      "Creates the INSTANCE section at runtime: a session ID and a declared purpose (for example, \"appointment_booking\"). The session ID lets the polyclinic tie multiple API calls to one booking attempt \u2014 check_availability, then book_slot, then confirm_booking \u2014 so it can spot when a fourth request for billing_records does not fit the pattern. The declared purpose gives the service a quick cross-check: does what the agent claims to be doing match what the deployer authorized? Both fields are unsigned; the agent has no trusted key. They are useful for tracking and logging, not sufficient grounds for sharing patient data. The agent instance carries signed credentials from the provider and deployer but cannot forge or alter them.",
     benefitsActor: [
       {
-        title: "Operational traceability",
+        title: "Standardised operational traceability",
         detail:
-          "Session IDs help providers and deployers debug a single problematic booking attempt without trawling through unrelated traffic.",
+          "Providers and deployers already generate session IDs for debugging and billing. The Agent ID standardises this so that a polyclinic can isolate one misbehaving booking session without shutting down the whole product.",
       },
     ],
     benefitsEcosystem: [
       {
-        title: "Minimum viable identity for a session",
+        title: "Detection floor for requests",
         detail:
-          "Even if no other sections were present, a session ID lets the polyclinic tie together all API calls from one booking attempt and notice if that session starts probing the entire schedule.",
+          "Without a session ID, all traffic from MedBot SG looks the same to the polyclinic. It can block everything or allow everything, but it cannot distinguish one suspicious booking attempt from another. The session ID is the detection floor \u2014 not enough to trust an agent with sensitive data, but the minimum needed to correlate requests, spot anomalies, and build an audit trail that the provider and deployer identity sections can later make actionable.",
       },
     ],
   },
@@ -494,16 +494,7 @@ export default function ArchV4() {
               const ey = t.y - uy * (to.h / 2 + 4);
 
               return (
-                <g key={i}>
-                  <Arrow x1={sx} y1={sy} x2={ex} y2={ey} color={C.border} opacity={0.5} />
-                  {c.label && (
-                    <EdgeLabel
-                      x={(sx + ex) / 2}
-                      y={(sy + ey) / 2}
-                      text={c.label}
-                    />
-                  )}
-                </g>
+                <Arrow key={i} x1={sx} y1={sy} x2={ex} y2={ey} color={C.border} opacity={0.5} />
               );
             })}
 
@@ -566,6 +557,34 @@ export default function ArchV4() {
                     ))}
                   </g>
                 </g>
+              );
+            })}
+
+            {/* Draw edge labels on top of nodes so they are never obscured */}
+            {CONNECTIONS.map((c, i) => {
+              const from = ENTITIES.find((e) => e.id === c.from);
+              const to = ENTITIES.find((e) => e.id === c.to);
+              if (!from || !to || !c.label) return null;
+              const f = getCenter(from);
+              const t = getCenter(to);
+              const dx = t.x - f.x;
+              const dy = t.y - f.y;
+              const len = Math.sqrt(dx * dx + dy * dy);
+              if (len === 0) return null;
+              const ux = dx / len;
+              const uy = dy / len;
+              const sx = f.x + ux * (from.w / 2 + 4);
+              const sy = f.y + uy * (from.h / 2 + 4);
+              const ex = t.x - ux * (to.w / 2 + 4);
+              const ey = t.y - uy * (to.h / 2 + 4);
+
+              return (
+                <EdgeLabel
+                  key={`label-${i}`}
+                  x={(sx + ex) / 2}
+                  y={(sy + ey) / 2}
+                  text={c.label}
+                />
               );
             })}
           </svg>
