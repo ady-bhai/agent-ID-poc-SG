@@ -1,11 +1,26 @@
-import { StrictMode, useState } from "react";
+import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import IncidentV5 from "../docs/incident_v5.jsx";
 import ArchV3 from "../docs/arch_v3.jsx";
 import ArchV4 from "../docs/arch_v4.jsx";
 
+function getInitialView() {
+  if (typeof window === "undefined") return "incident";
+  const hash = window.location.hash.replace("#", "");
+  if (hash === "arch" || hash === "ecosystem" || hash === "incident") return hash;
+  const params = new URLSearchParams(window.location.search);
+  const qp = params.get("view");
+  if (qp === "arch" || qp === "ecosystem" || qp === "incident") return qp;
+  return "incident";
+}
+
 function App() {
-  const [view, setView] = useState("incident");
+  const [view, setView] = useState(getInitialView);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.history.replaceState({}, "", `#${view}`);
+  }, [view]);
 
   return (
     <div>

@@ -265,6 +265,24 @@ function getCenter(e) {
   return { x: e.x + e.w / 2, y: e.y + e.h / 2 };
 }
 
+function wrapLines(text, maxChars = 40, maxLines = 3) {
+  if (!text) return [];
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  words.forEach((w) => {
+    const candidate = current ? `${current} ${w}` : w;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+    } else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  });
+  if (current) lines.push(current);
+  return lines.slice(0, maxLines);
+}
+
 function Arrow({ x1, y1, x2, y2, color = C.border, dashed = false, opacity = 0.6 }) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -438,6 +456,7 @@ export default function ArchV4() {
 
             {ENTITIES.map((e) => {
               const isSel = selected === e.id;
+              const lines = wrapLines(e.desc, 40, 3);
               return (
                 <g key={e.id} onClick={() => handleClick(e.id)} style={{ cursor: "pointer" }}>
                   {isSel && (
@@ -475,15 +494,18 @@ export default function ArchV4() {
                   >
                     {e.label}
                   </text>
-                  <text
-                    x={e.x + 12}
-                    y={e.y + 36}
-                    fontSize={7.5}
-                    fill={C.textDim}
-                    fontFamily="inherit"
-                  >
-                    {e.desc.length > 52 ? e.desc.slice(0, 52) + "\u2026" : e.desc}
-                  </text>
+                  {lines.map((line, idx) => (
+                    <text
+                      key={idx}
+                      x={e.x + 12}
+                      y={e.y + 36 + idx * 10}
+                      fontSize={7.5}
+                      fill={C.textDim}
+                      fontFamily="inherit"
+                    >
+                      {line}
+                    </text>
+                  ))}
                 </g>
               );
             })}
