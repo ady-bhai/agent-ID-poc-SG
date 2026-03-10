@@ -147,20 +147,30 @@ const ENTITIES = [
     x: 390, y: 120, w: 180, h: 56,
     zone: "core",
     contribution:
-      "Groups seven sections \u2014 Instance, Provider, Model, Safety, Deployer, Capabilities, Incident Response \u2014 into one composite payload. Keeps separate signatures from MedBot SG, SG AISI (for Safety), and Raffles Medical on their respective parts.",
+      "Bundles the claims this request depends on into one object the polyclinic can inspect before sharing data. Provider claims, deployer claims, and any independent safety certification each retain the signer responsible for that claim, so the polyclinic can verify each one against the party that made it rather than trusting one actor\u2019s word for everything. The sections are also bound together, so a valid provider attestation cannot be reused with a different deployer or session.",
     benefitsActor: [
       {
-        title: "Single integration point",
+        title: "Graduated identity for different use cases",
         detail:
-          "Instead of negotiating bespoke contracts and formats with each clinic, the agent product can present the same structured credential to many healthcare services.",
+          "The same credential format supports different levels of disclosure. An agent with only a session ID gets minimal access. One with provider identity and declared capabilities can qualify for lower-sensitivity access and basic scope checks. A credential carrying provider identity, deployer binding, declared capabilities, and safety assurance can qualify for patient scheduling data.",
       },
+      {
+        title: "One portable object for many services",
+        detail:
+          "Instead of each polyclinic inventing its own verification process, providers and deployers present one portable credential that different services can read. This lowers the friction that currently makes most services not check identity or safety evidence at all.",
+      }
     ],
     benefitsEcosystem: [
       {
-        title: "One object to inspect before sharing data",
+        title: "Consistent trust decisions across the system",
         detail:
-          "The polyclinic can look at a single credential to understand who built and deployed this agent, what model it runs on, and how to reach them, before deciding whether to disclose appointment availability.",
+          "Without a composite credential, sensitive-data decisions fragment into ad hoc arrangements: every polyclinic asks for different evidence, every provider answers differently, and trust decisions become inconsistent across the healthcare system.",
       },
+      {
+        title: "Preserved signer boundaries and binding",
+        detail:
+          "Without preserved signer boundaries, services cannot distinguish independently verified claims from self-reported ones. Without binding, legitimate fragments from different actors can be combined into misleading identities. The working draft treats interoperability, layered architecture, and non-reusability of ID parts as central design requirements; this credential is what those requirements look like in practice.",
+      }
     ],
   },
   {
