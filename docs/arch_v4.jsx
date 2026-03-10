@@ -10,7 +10,7 @@ const C = {
   border: "#21293b",
   borderFocus: "#3d7cf5",
   text: "#d1d9e6",
-  textDim: "#5e6e87",
+  textDim: "#7b8aa5",
   textBright: "#f0f4f8",
   blue: "#3d7cf5",
   blueGlow: "rgba(61,124,245,0.10)",
@@ -33,7 +33,7 @@ const ENTITIES = [
     label: "Developer",
     desc: "Trains the foundation model.",
     color: C.blue,
-    x: 80, y: 420, w: 160, h: 64,
+    x: 80, y: 420, w: 170, h: 72,
     zone: "supply",
     contribution:
       "Does not sign the credential directly. The developer\u2019s work appears indirectly in the MODEL section, where the provider records the model name and family (e.g., \"Claude Opus vX.Y\" from Anthropic).",
@@ -57,7 +57,7 @@ const ENTITIES = [
     label: "Provider",
     desc: "Builds the healthcare booking agent product.",
     color: C.green,
-    x: 80, y: 310, w: 160, h: 64,
+    x: 80, y: 310, w: 170, h: 72,
     zone: "supply",
     contribution:
       "Signs the PROVIDER, MODEL, and INCIDENT RESPONSE sections. For this scenario, MedBot SG records its organization name, a security contact, the exact model in use, and an incident-response endpoint/SLA the polyclinic can rely on.",
@@ -91,7 +91,7 @@ const ENTITIES = [
     label: "Deployer",
     desc: "Configures and launches the agent (Singpass-verified).",
     color: C.orange,
-    x: 80, y: 200, w: 160, h: 64,
+    x: 80, y: 200, w: 170, h: 72,
     zone: "supply",
     contribution:
       "Signs the DEPLOYER and CAPABILITIES sections. Here, Raffles Medical records its Singpass-verified UEN and declares that this agent may read and book appointments (but not touch full visit histories), together with its autonomy level.",
@@ -120,7 +120,7 @@ const ENTITIES = [
     label: "Agent Instance",
     desc: "A single booking session making this request.",
     color: C.cyan,
-    x: 310, y: 200, w: 190, h: 80,
+    x: 305, y: 200, w: 210, h: 88,
     zone: "core",
     contribution:
       "Creates the INSTANCE section at runtime: a session ID (UUID) and a declared purpose such as \"appointment_booking\". These fields are self-asserted and unsigned. The agent also carries, but does not author, the signed sections from other actors.",
@@ -168,7 +168,7 @@ const ENTITIES = [
     label: "Service",
     desc: "Polyclinic API deciding whether to share slots.",
     color: C.red,
-    x: 590, y: 200, w: 190, h: 80,
+    x: 600, y: 200, w: 210, h: 88,
     zone: "core",
     contribution:
       "Does not contribute data to the credential. It verifies signatures against registry-held keys, checks the credential against its access policy for appointment data, and logs each decision together with the credential for audit.",
@@ -221,7 +221,7 @@ const ENTITIES = [
     label: "Incident Responder",
     desc: "Investigates booking incidents and follow-up.",
     color: C.textDim,
-    x: 830, y: 200, w: 160, h: 64,
+    x: 830, y: 200, w: 180, h: 72,
     zone: "external",
     contribution:
       "Does not sign or alter the credential. Consumes the same Agent ID and service logs to understand which product and which deployer were involved when something goes wrong with appointment data.",
@@ -265,22 +265,46 @@ function getCenter(e) {
   return { x: e.x + e.w / 2, y: e.y + e.h / 2 };
 }
 
-function wrapLines(text, maxChars = 40, maxLines = 3) {
+// Wrap description text based on actual box width/height so it fits cleanly.
+function wrapLinesToBox(text, boxWidth, fontSize = 8, paddingX = 24, maxLines = 3) {
   if (!text) return [];
-  const words = text.split(" ");
+
+  const avgCharWidth = fontSize * 0.62;
+  const maxChars = Math.max(10, Math.floor((boxWidth - paddingX) / avgCharWidth));
+
+  const words = text.split(/\s+/);
   const lines = [];
   let current = "";
-  words.forEach((w) => {
-    const candidate = current ? `${current} ${w}` : w;
+
+  for (let i = 0; i < words.length; i++) {
+    const candidate = current ? `${current} ${words[i]}` : words[i];
+
     if (candidate.length <= maxChars) {
       current = candidate;
-    } else {
-      if (current) lines.push(current);
-      current = w;
+      continue;
     }
-  });
+
+    if (!current) {
+      lines.push(words[i].slice(0, maxChars - 1) + "…");
+    } else {
+      lines.push(current);
+      current = words[i];
+    }
+
+    if (lines.length === maxLines) {
+      lines[maxLines - 1] = lines[maxLines - 1].slice(0, maxChars - 1) + "…";
+      return lines;
+    }
+  }
+
   if (current) lines.push(current);
-  return lines.slice(0, maxLines);
+
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+    lines[maxLines - 1] = lines[maxLines - 1].slice(0, maxChars - 1) + "…";
+  }
+
+  return lines;
 }
 
 function Arrow({ x1, y1, x2, y2, color = C.border, dashed = false, opacity = 0.6 }) {
@@ -311,6 +335,26 @@ function Arrow({ x1, y1, x2, y2, color = C.border, dashed = false, opacity = 0.6
         points={`${x2},${y2} ${ax + px * 0.6},${ay + py * 0.6} ${ax - px * 0.6},${ay - py * 0.6}`}
         fill={color}
       />
+    </g>
+  );
+}
+
+function EdgeLabel({ x, y, text }) {
+  if (!text) return null;
+  const w = text.length * 5.4 + 12;
+  return (
+    <g transform={`translate(${x - w / 2}, ${y - 11})`} opacity={0.9}>
+      <rect width={w} height={14} rx={7} fill={C.bg} stroke={C.border} />
+      <text
+        x={w / 2}
+        y={9.5}
+        fontSize={7.5}
+        fill={C.textDim}
+        textAnchor="middle"
+        fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
+      >
+        {text}
+      </text>
     </g>
   );
 }
@@ -390,6 +434,20 @@ export default function ArchV4() {
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         <div style={{ flex: 1, position: "relative", overflow: "auto" }}>
           <svg viewBox="0 0 1050 530" style={{ width: "100%", height: "100%", minHeight: 480 }}>
+            <defs>
+              {ENTITIES.map((e) => (
+                <clipPath key={`clip-${e.id}`} id={`clip-${e.id}`}>
+                  <rect
+                    x={e.x + 12}
+                    y={e.y + 30}
+                    width={e.w - 24}
+                    height={e.h - 38}
+                    rx={6}
+                  />
+                </clipPath>
+              ))}
+            </defs>
+
             {ZONES.map((z, i) => (
               <g key={i}>
                 <rect
@@ -439,16 +497,11 @@ export default function ArchV4() {
                 <g key={i}>
                   <Arrow x1={sx} y1={sy} x2={ex} y2={ey} color={C.border} opacity={0.5} />
                   {c.label && (
-                    <text
-                      x={(sx + ex) / 2 + 8}
-                      y={(sy + ey) / 2 - 6}
-                      fontSize={8}
-                      fill={C.textDim}
-                      fontFamily="inherit"
-                      opacity={0.7}
-                    >
-                      {c.label}
-                    </text>
+                    <EdgeLabel
+                      x={(sx + ex) / 2}
+                      y={(sy + ey) / 2}
+                      text={c.label}
+                    />
                   )}
                 </g>
               );
@@ -456,7 +509,11 @@ export default function ArchV4() {
 
             {ENTITIES.map((e) => {
               const isSel = selected === e.id;
-              const lines = wrapLines(e.desc, 40, 3);
+              const bodyFontSize = 8;
+              const lineHeight = 10;
+              const maxLines = Math.max(1, Math.floor((e.h - 40) / lineHeight));
+              const lines = wrapLinesToBox(e.desc, e.w, bodyFontSize, 24, maxLines);
+
               return (
                 <g key={e.id} onClick={() => handleClick(e.id)} style={{ cursor: "pointer" }}>
                   {isSel && (
@@ -490,22 +547,24 @@ export default function ArchV4() {
                     fontSize={11}
                     fontWeight={700}
                     fill={e.color}
-                    fontFamily="inherit"
+                    fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
                   >
                     {e.label}
                   </text>
-                  {lines.map((line, idx) => (
-                    <text
-                      key={idx}
-                      x={e.x + 12}
-                      y={e.y + 36 + idx * 10}
-                      fontSize={7.5}
-                      fill={C.textDim}
-                      fontFamily="inherit"
-                    >
-                      {line}
-                    </text>
-                  ))}
+                  <g clipPath={`url(#clip-${e.id})`}>
+                    {lines.map((line, idx) => (
+                      <text
+                        key={idx}
+                        x={e.x + 12}
+                        y={e.y + 38 + idx * lineHeight}
+                        fontSize={bodyFontSize}
+                        fill={C.textDim}
+                        fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
+                      >
+                        {line}
+                      </text>
+                    ))}
+                  </g>
                 </g>
               );
             })}
