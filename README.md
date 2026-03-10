@@ -1,6 +1,6 @@
 # Agent IDs Singapore — Proof of Concept
 
-**AI agent identity system PoC for Singapore **
+**Visual, Interactive POC of Agent IDs**
 
 ---
 
