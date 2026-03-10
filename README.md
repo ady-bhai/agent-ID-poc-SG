@@ -1,6 +1,6 @@
 # Agent IDs Singapore — Proof of Concept
 
-**AI agent identity system PoC for Singapore IMDA / SG AISI**
+**AI agent identity system PoC for Singapore **
 
 ---
 
@@ -57,29 +57,3 @@ AGENT IDs SINGAPORE/
 
 - **Source PDFs** — See [`docs/00-SOURCE-DOCUMENTS-INDEX.md`](./docs/00-SOURCE-DOCUMENTS-INDEX.md) for paths. Includes: Aditya Singapore Masterdoc (5, 6), SG-agent-IDs-working-draft (19, 20, 21), OpenID 2510.25819v1.
 - **Synthesis + LLM analysis evaluation** — [`docs/01-SYNTHESIS-AND-LLM-ANALYSIS-EVALUATION.md`](./docs/01-SYNTHESIS-AND-LLM-ANALYSIS-EVALUATION.md) — Cross-references source docs, validates LLM recommendations, adoption table.
-
-## Collaboration Workflow (You + Sam)
-
-- **Branches**
-  - `main` — stable, demo-ready for IMDA / external viewers.
-  - `feat/...` — short-lived feature branches (e.g. `feat/incident-v6`, `feat/ecosystem-copy-edits`).
-
-- **Who edits what**
-  - You: structure, components, data model.
-  - Sam: copy and governance framing in a few clearly-marked files:
-    - `docs/arch_v4.jsx` — ecosystem view text (entity descriptions and detail panel content).
-    - `docs/incident_v5.jsx` — incident narratives, outcome text, phase labels.
-    - Markdown docs in `docs/` (briefings, analysis, etc.).
-
-- **PR expectations**
-  - New work happens on a `feat/...` branch.
-  - Open a PR into `main` when the view is coherent enough for review.
-  - Sam can leave line comments or commit small wording tweaks directly in the PR.
-
-- **How to share a change**
-  - Push the branch.
-  - Send Sam:
-    - The GitHub PR link, and
-    - The relevant demo URL, e.g. `https://ady-bhai.github.io/agent-ID-poc-SG/#view1-ecosystem`.
-
-This keeps `main` always demo-safe while giving both of you a simple path to iterate on the visuals and the underlying argument.
