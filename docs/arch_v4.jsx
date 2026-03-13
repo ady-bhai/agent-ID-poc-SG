@@ -1,4 +1,10 @@
-import { useState, useCallback } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  createContext,
+  useContext,
+} from "react";
 
 // ── Palette ──
 const C = {
@@ -369,36 +375,131 @@ function EdgeLabel({ x, y, text }) {
   );
 }
 
-// ── Main Component ──
-export default function ArchV4() {
-  const [selected, setSelected] = useState(null);
+// ── Shared Agent ID state (single causal model, three lenses) ──
 
-  const sel = ENTITIES.find((e) => e.id === selected);
+const INITIAL_AGENT_STATE = {
+  scenario: "healthcare-booking",
+  trustPreset: "provider-verifiable",
+  actorToggles: {
+    provider: true,
+    deployer: true,
+    instance: true,
+  },
+  actorFocus: null,
+  credentialFocus: null,
+  consequenceFocus: null,
+  incidentState: "full",
+  currentView: "ecosystem",
+};
 
-  const handleClick = useCallback((id) => {
-    setSelected((prev) => (prev === id ? null : id));
-  }, []);
+const AgentIdStateContext = createContext(null);
+
+function AgentIdStateProvider({ children }) {
+  const [state, setState] = useState(INITIAL_AGENT_STATE);
+
+  const value = useMemo(
+    () => ({
+      state,
+      setState,
+      setPartialState: (patch) =>
+        setState((prev) => ({
+          ...prev,
+          ...patch,
+        })),
+    }),
+    [state],
+  );
+
+  return (
+    <AgentIdStateContext.Provider value={value}>
+      {children}
+    </AgentIdStateContext.Provider>
+  );
+}
+
+function useAgentIdState() {
+  const ctx = useContext(AgentIdStateContext);
+  if (!ctx) {
+    throw new Error("useAgentIdState must be used within AgentIdStateProvider");
+  }
+  return ctx;
+}
+
+// ── Top control bar: scenario + trust presets + customize toggles ──
+
+function TopControlBar() {
+  const { state, setPartialState } = useAgentIdState();
+
+  const presets = [
+    {
+      id: "no-identity",
+      label: "No identity",
+      description: "Service cannot verify agent or operator.",
+      toggles: { provider: false, deployer: false, instance: true },
+    },
+    {
+      id: "session-traceable",
+      label: "Session traceable",
+      description: "Service can correlate sessions, not source.",
+      toggles: { provider: false, deployer: false, instance: true },
+    },
+    {
+      id: "provider-verifiable",
+      label: "Provider verifiable",
+      description: "Service can verify provider identity.",
+      toggles: { provider: true, deployer: false, instance: true },
+    },
+    {
+      id: "full-chain-verifiable",
+      label: "Full chain verifiable",
+      description: "Service can verify provider + deployer + instance.",
+      toggles: { provider: true, deployer: true, instance: true },
+    },
+  ];
+
+  const activePreset =
+    presets.find((p) => p.id === state.trustPreset) ?? presets[2];
+
+  const handlePresetClick = useCallback(
+    (preset) => {
+      setPartialState({
+        trustPreset: preset.id,
+        actorToggles: preset.toggles,
+      });
+    },
+    [setPartialState],
+  );
+
+  const handleToggleChange = useCallback(
+    (key) => {
+      setPartialState({
+        trustPreset: "custom",
+        actorToggles: {
+          ...state.actorToggles,
+          [key]: !state.actorToggles[key],
+        },
+      });
+    },
+    [setPartialState, state.actorToggles],
+  );
 
   return (
     <div
       style={{
-        background: C.bg,
-        minHeight: "100vh",
-        color: C.text,
-        fontFamily: "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace",
+        padding: "16px 24px",
+        borderBottom: `1px solid ${C.border}`,
         display: "flex",
         flexDirection: "column",
+        gap: 10,
       }}
     >
       <div
         style={{
-          padding: "16px 24px",
-          borderBottom: `1px solid ${C.border}`,
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
+          gap: 16,
           flexWrap: "wrap",
-          gap: 12,
         }}
       >
         <div>
@@ -412,7 +513,7 @@ export default function ArchV4() {
               marginBottom: 4,
             }}
           >
-            Agent ID PoC \u2014 Ecosystem View
+            Agent ID PoC — Interactive Views
           </div>
           <h1
             style={{
@@ -433,209 +534,803 @@ export default function ArchV4() {
               maxWidth: 540,
             }}
           >
-            A MedBot SG booking agent, deployed by Raffles Medical, is asking a polyclinic API for appointment
-            availability. This view shows who the actors are and what information each one contributes to the Agent ID
-            so the polyclinic can decide whether to share sensitive scheduling data. Click any component to see its
-            role.
+            One shared state, three lenses. Use the controls to see how stronger or weaker identity changes
+            what the polyclinic service can safely do with appointment data.
           </p>
         </div>
-      </div>
-
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, position: "relative", overflow: "auto" }}>
-          <svg viewBox="0 0 1050 530" style={{ width: "100%", height: "100%", minHeight: 480 }}>
-            <defs>
-              {ENTITIES.map((e) => (
-                <clipPath key={`clip-${e.id}`} id={`clip-${e.id}`}>
-                  <rect
-                    x={e.x + 12}
-                    y={e.y + 30}
-                    width={e.w - 24}
-                    height={e.h - 38}
-                    rx={6}
-                  />
-                </clipPath>
-              ))}
-            </defs>
-
-            {ZONES.map((z, i) => (
-              <g key={i}>
-                <rect
-                  x={z.x}
-                  y={z.y}
-                  width={z.w}
-                  height={z.h}
-                  rx={12}
-                  fill={z.color}
-                  stroke={z.borderColor}
-                  strokeWidth={1}
-                  strokeDasharray="6,4"
-                  opacity={0.5}
-                />
-                <text
-                  x={z.x + 10}
-                  y={z.y + 16}
-                  fontSize={9}
-                  fontWeight={700}
-                  fill={z.borderColor}
-                  fontFamily="inherit"
-                  opacity={0.7}
-                >
-                  {z.label}
-                </text>
-              </g>
-            ))}
-
-            {CONNECTIONS.map((c, i) => {
-              const from = ENTITIES.find((e) => e.id === c.from);
-              const to = ENTITIES.find((e) => e.id === c.to);
-              if (!from || !to) return null;
-              const f = getCenter(from);
-              const t = getCenter(to);
-              const dx = t.x - f.x;
-              const dy = t.y - f.y;
-              const len = Math.sqrt(dx * dx + dy * dy);
-              if (len === 0) return null;
-              const ux = dx / len;
-              const uy = dy / len;
-              const sx = f.x + ux * (from.w / 2 + 4);
-              const sy = f.y + uy * (from.h / 2 + 4);
-              const ex = t.x - ux * (to.w / 2 + 4);
-              const ey = t.y - uy * (to.h / 2 + 4);
-
-              return (
-                <Arrow key={i} x1={sx} y1={sy} x2={ex} y2={ey} color={C.border} opacity={0.5} />
-              );
-            })}
-
-            {ENTITIES.map((e) => {
-              const isSel = selected === e.id;
-              const bodyFontSize = 8;
-              const lineHeight = 10;
-              const maxLines = Math.max(1, Math.floor((e.h - 40) / lineHeight));
-              const lines = wrapLinesToBox(e.desc, e.w, bodyFontSize, 24, maxLines);
-
-              return (
-                <g key={e.id} onClick={() => handleClick(e.id)} style={{ cursor: "pointer" }}>
-                  {isSel && (
-                    <rect
-                      x={e.x - 3}
-                      y={e.y - 3}
-                      width={e.w + 6}
-                      height={e.h + 6}
-                      rx={12}
-                      fill="none"
-                      stroke={e.color}
-                      strokeWidth={2}
-                      opacity={0.4}
-                    >
-                      <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2s" repeatCount="indefinite" />
-                    </rect>
-                  )}
-                  <rect
-                    x={e.x}
-                    y={e.y}
-                    width={e.w}
-                    height={e.h}
-                    rx={9}
-                    fill={isSel ? C.cardSelected : C.card}
-                    stroke={isSel ? e.color : C.border}
-                    strokeWidth={isSel ? 1.5 : 1}
-                  />
-                  <text
-                    x={e.x + 12}
-                    y={e.y + 22}
-                    fontSize={11}
-                    fontWeight={700}
-                    fill={e.color}
-                    fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
-                  >
-                    {e.label}
-                  </text>
-                  <g clipPath={`url(#clip-${e.id})`}>
-                    {lines.map((line, idx) => (
-                      <text
-                        key={idx}
-                        x={e.x + 12}
-                        y={e.y + 38 + idx * lineHeight}
-                        fontSize={bodyFontSize}
-                        fill={C.textDim}
-                        fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
-                      >
-                        {line}
-                      </text>
-                    ))}
-                  </g>
-                </g>
-              );
-            })}
-
-            {/* Draw edge labels on top of nodes so they are never obscured */}
-            {CONNECTIONS.map((c, i) => {
-              const from = ENTITIES.find((e) => e.id === c.from);
-              const to = ENTITIES.find((e) => e.id === c.to);
-              if (!from || !to || !c.label) return null;
-              const f = getCenter(from);
-              const t = getCenter(to);
-              const dx = t.x - f.x;
-              const dy = t.y - f.y;
-              const len = Math.sqrt(dx * dx + dy * dy);
-              if (len === 0) return null;
-              const ux = dx / len;
-              const uy = dy / len;
-              const sx = f.x + ux * (from.w / 2 + 4);
-              const sy = f.y + uy * (from.h / 2 + 4);
-              const ex = t.x - ux * (to.w / 2 + 4);
-              const ey = t.y - uy * (to.h / 2 + 4);
-
-              return (
-                <EdgeLabel
-                  key={`label-${i}`}
-                  x={(sx + ex) / 2}
-                  y={(sy + ey) / 2}
-                  text={c.label}
-                />
-              );
-            })}
-          </svg>
-        </div>
-
         <div
           style={{
-            width: selected ? 360 : 0,
-            overflow: "hidden",
-            transition: "width 0.25s ease",
-            borderLeft: selected ? `1px solid ${C.border}` : "none",
-            background: C.panel,
-            flexShrink: 0,
+            minWidth: 260,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
           }}
         >
-          {sel && (
-            <div style={{ width: 360, padding: 20, overflowY: "auto", height: "100%" }}>
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: C.textDim,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Identity strength presets
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {presets.map((p) => {
+              const isActive = state.trustPreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => handlePresetClick(p)}
+                  style={{
+                    borderRadius: 999,
+                    border: `1px solid ${isActive ? C.blue : C.border}`,
+                    background: isActive ? C.blueGlow : C.panel,
+                    color: C.text,
+                    fontSize: 10,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              alignItems: "center",
+              marginTop: 2,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 9,
+                color: C.textDim,
+              }}
+            >
+              Customize actors:
+            </span>
+            {["instance", "provider", "deployer"].map((key) => (
+              <label
+                key={key}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 10,
+                  color: C.textDim,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={!!state.actorToggles[key]}
+                  onChange={() => handleToggleChange(key)}
+                  style={{ cursor: "pointer" }}
+                />
+                <span style={{ textTransform: "capitalize" }}>{key}</span>
+              </label>
+            ))}
+          </div>
+          <div
+            style={{
+              fontSize: 9,
+              color: C.textDim,
+            }}
+          >
+            {activePreset.description}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── View tabs / stepper ──
+
+function ViewTabs() {
+  const {
+    state: { currentView },
+    setPartialState,
+  } = useAgentIdState();
+
+  const views = [
+    { id: "ecosystem", label: "1. Ecosystem", subtitle: "Who contributes what" },
+    { id: "credential", label: "2. Credential", subtitle: "What the service can inspect" },
+    { id: "consequences", label: "3. Consequences", subtitle: "What the service can still do" },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        padding: "8px 20px 6px",
+        borderBottom: `1px solid ${C.border}`,
+        background: C.bg,
+      }}
+    >
+      {views.map((v) => {
+        const isActive = currentView === v.id;
+        return (
+          <button
+            key={v.id}
+            onClick={() => setPartialState({ currentView: v.id })}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              padding: "6px 10px",
+              borderRadius: 999,
+              border: `1px solid ${isActive ? C.blue : C.border}`,
+              background: isActive ? C.blueGlow : C.panel,
+              color: C.text,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              minWidth: 0,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            >
+              {v.label}
+            </span>
+            <span
+              style={{
+                fontSize: 9,
+                color: C.textDim,
+              }}
+            >
+              {v.subtitle}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Ecosystem lens (map only; inspector is shared) ──
+
+function EcosystemView() {
+  const { state, setPartialState } = useAgentIdState();
+
+  const handleClick = useCallback(
+    (id) => {
+      setPartialState({
+        actorFocus: state.actorFocus === id ? null : id,
+        // keep credential/consequence focus unchanged for now
+      });
+    },
+    [setPartialState, state.actorFocus],
+  );
+
+  return (
+    <div style={{ flex: 1, position: "relative", overflow: "auto" }}>
+      <svg viewBox="0 0 1050 530" style={{ width: "100%", height: "100%", minHeight: 480 }}>
+        <defs>
+          {ENTITIES.map((e) => (
+            <clipPath key={`clip-${e.id}`} id={`clip-${e.id}`}>
+              <rect
+                x={e.x + 12}
+                y={e.y + 30}
+                width={e.w - 24}
+                height={e.h - 38}
+                rx={6}
+              />
+            </clipPath>
+          ))}
+        </defs>
+
+        {ZONES.map((z, i) => (
+          <g key={i}>
+            <rect
+              x={z.x}
+              y={z.y}
+              width={z.w}
+              height={z.h}
+              rx={12}
+              fill={z.color}
+              stroke={z.borderColor}
+              strokeWidth={1}
+              strokeDasharray="6,4"
+              opacity={0.5}
+            />
+            <text
+              x={z.x + 10}
+              y={z.y + 16}
+              fontSize={9}
+              fontWeight={700}
+              fill={z.borderColor}
+              fontFamily="inherit"
+              opacity={0.7}
+            >
+              {z.label}
+            </text>
+          </g>
+        ))}
+
+        {CONNECTIONS.map((c, i) => {
+          const from = ENTITIES.find((e) => e.id === c.from);
+          const to = ENTITIES.find((e) => e.id === c.to);
+          if (!from || !to) return null;
+          const f = getCenter(from);
+          const t = getCenter(to);
+          const dx = t.x - f.x;
+          const dy = t.y - f.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) return null;
+          const ux = dx / len;
+          const uy = dy / len;
+          const sx = f.x + ux * (from.w / 2 + 4);
+          const sy = f.y + uy * (from.h / 2 + 4);
+          const ex = t.x - ux * (to.w / 2 + 4);
+          const ey = t.y - uy * (to.h / 2 + 4);
+
+          return (
+            <Arrow key={i} x1={sx} y1={sy} x2={ex} y2={ey} color={C.border} opacity={0.5} />
+          );
+        })}
+
+        {ENTITIES.map((e) => {
+          const isSel = state.actorFocus === e.id;
+          const bodyFontSize = 8;
+          const lineHeight = 10;
+          const maxLines = Math.max(1, Math.floor((e.h - 40) / lineHeight));
+          const lines = wrapLinesToBox(e.desc, e.w, bodyFontSize, 24, maxLines);
+
+          return (
+            <g key={e.id} onClick={() => handleClick(e.id)} style={{ cursor: "pointer" }}>
+              {isSel && (
+                <rect
+                  x={e.x - 3}
+                  y={e.y - 3}
+                  width={e.w + 6}
+                  height={e.h + 6}
+                  rx={12}
+                  fill="none"
+                  stroke={e.color}
+                  strokeWidth={2}
+                  opacity={0.4}
+                >
+                  <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2s" repeatCount="indefinite" />
+                </rect>
+              )}
+              <rect
+                x={e.x}
+                y={e.y}
+                width={e.w}
+                height={e.h}
+                rx={9}
+                fill={isSel ? C.cardSelected : C.card}
+                stroke={isSel ? e.color : C.border}
+                strokeWidth={isSel ? 1.5 : 1}
+              />
+              <text
+                x={e.x + 12}
+                y={e.y + 22}
+                fontSize={11}
+                fontWeight={700}
+                fill={e.color}
+                fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
+              >
+                {e.label}
+              </text>
+              <g clipPath={`url(#clip-${e.id})`}>
+                {lines.map((line, idx) => (
+                  <text
+                    key={idx}
+                    x={e.x + 12}
+                    y={e.y + 38 + idx * lineHeight}
+                    fontSize={bodyFontSize}
+                    fill={C.textDim}
+                    fontFamily="'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace"
+                  >
+                    {line}
+                  </text>
+                ))}
+              </g>
+            </g>
+          );
+        })}
+
+        {CONNECTIONS.map((c, i) => {
+          const from = ENTITIES.find((e) => e.id === c.from);
+          const to = ENTITIES.find((e) => e.id === c.to);
+          if (!from || !to || !c.label) return null;
+          const f = getCenter(from);
+          const t = getCenter(to);
+          const dx = t.x - f.x;
+          const dy = t.y - f.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len === 0) return null;
+          const ux = dx / len;
+          const uy = dy / len;
+          const sx = f.x + ux * (from.w / 2 + 4);
+          const sy = f.y + uy * (from.h / 2 + 4);
+          const ex = t.x - ux * (to.w / 2 + 4);
+          const ey = t.y - uy * (to.h / 2 + 4);
+
+          return (
+            <EdgeLabel
+              key={`label-${i}`}
+              x={(sx + ex) / 2}
+              y={(sy + ey) / 2}
+              text={c.label}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ── Credential lens (placeholder structure for now) ──
+
+const CREDENTIAL_SECTIONS = [
+  { id: "provider-identity", label: "Provider identity" },
+  { id: "model", label: "Model" },
+  { id: "incident-response", label: "Incident response" },
+  { id: "deployer-identity", label: "Deployer identity" },
+  { id: "capabilities", label: "Capabilities & scope" },
+  { id: "safety-assurance", label: "Safety assurance" },
+  { id: "instance", label: "Instance session" },
+];
+
+function CredentialView() {
+  const { state, setPartialState } = useAgentIdState();
+
+  const handleSectionClick = useCallback(
+    (id) => {
+      setPartialState({
+        credentialFocus: state.credentialFocus === id ? null : id,
+      });
+    },
+    [setPartialState, state.credentialFocus],
+  );
+
+  const actorToggles = state.actorToggles || {};
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        minHeight: 0,
+        gap: 16,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          width: 220,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: C.textDim,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+          }}
+        >
+          Who has signed this?
+        </div>
+        {["provider", "deployer", "instance"].map((key) => (
+          <label
+            key={key}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 10,
+              color: C.textDim,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={!!actorToggles[key]}
+              onChange={() =>
+                setPartialState({
+                  trustPreset: "custom",
+                  actorToggles: {
+                    ...actorToggles,
+                    [key]: !actorToggles[key],
+                  },
+                })
+              }
+              style={{ cursor: "pointer" }}
+            />
+            <span style={{ textTransform: "capitalize" }}>{key}</span>
+          </label>
+        ))}
+        <p
+          style={{
+            fontSize: 10,
+            color: C.textDim,
+            marginTop: 4,
+          }}
+        >
+          Uncheck an actor to see which sections disappear from the credential, then
+          notice how the service&apos;s options change.
+        </p>
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-start",
+        }}
+      >
+        <div
+          style={{
+            width: 420,
+            borderRadius: 12,
+            background: C.card,
+            border: `1px solid ${C.border}`,
+            padding: 16,
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            rowGap: 8,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: C.textBright,
+              marginBottom: 4,
+            }}
+          >
+            Agent ID credential
+          </div>
+          {CREDENTIAL_SECTIONS.map((s) => {
+            const isFocused = state.credentialFocus === s.id;
+            // very simple mapping just for visual dimming
+            const isPresent =
+              (s.id === "provider-identity" ||
+                s.id === "model" ||
+                s.id === "incident-response") ?
+                actorToggles.provider :
+              (s.id === "deployer-identity" || s.id === "capabilities") ?
+                actorToggles.deployer :
+              s.id === "instance" ?
+                actorToggles.instance :
+                actorToggles.provider && actorToggles.deployer;
+
+            return (
+              <button
+                key={s.id}
+                onClick={() => handleSectionClick(s.id)}
+                style={{
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  border: `1px solid ${
+                    isFocused ? C.blue : isPresent ? C.border : "#202533"
+                  }`,
+                  background: isFocused
+                    ? C.blueGlow
+                    : isPresent
+                    ? C.panel
+                    : "#05070c",
+                  opacity: isPresent ? 1 : 0.45,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    marginBottom: 2,
+                    color: C.textBright,
+                  }}
+                >
+                  {s.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: C.textDim,
+                    marginBottom: 2,
+                  }}
+                >
+                  In any deployment: short generic description of what this
+                  section lets the service know.
+                </div>
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: C.textDim,
+                    opacity: 0.85,
+                  }}
+                >
+                  Example – MedBot SG: scenario-specific line tying this section
+                  to the booking agent.
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Consequences lens (response/task cards) ──
+
+const CONSEQUENCE_PHASES = [
+  { id: "verify-source", label: "Verify source" },
+  { id: "scope-permissions", label: "Scope permissions" },
+  { id: "contact-operator", label: "Contact operator" },
+  { id: "attribute-responsibility", label: "Attribute responsibility" },
+  { id: "contain-shutdown", label: "Contain / shut down" },
+  { id: "recover-report", label: "Recover / report" },
+];
+
+function computePhaseStatus(phaseId, state) {
+  const { actorToggles } = state;
+  const hasProvider = !!actorToggles.provider;
+  const hasDeployer = !!actorToggles.deployer;
+  const hasInstance = !!actorToggles.instance;
+
+  if (phaseId === "verify-source") {
+    if (hasProvider) return "works";
+    if (hasInstance) return "degrades";
+    return "fails";
+  }
+
+  if (phaseId === "attribute-responsibility") {
+    if (hasProvider && hasDeployer) return "works";
+    if (hasProvider || hasDeployer) return "degrades";
+    return "fails";
+  }
+
+  if (phaseId === "scope-permissions") {
+    if (hasDeployer) return "works";
+    return "degrades";
+  }
+
+  if (phaseId === "contact-operator") {
+    if (hasProvider) return "works";
+    return "fails";
+  }
+
+  if (phaseId === "contain-shutdown") {
+    if (hasProvider && hasInstance) return "works";
+    if (hasProvider || hasInstance) return "degrades";
+    return "fails";
+  }
+
+  if (phaseId === "recover-report") {
+    if (hasProvider || hasDeployer || hasInstance) return "works";
+    return "degrades";
+  }
+
+  return "degrades";
+}
+
+function ConsequencesView() {
+  const { state, setPartialState } = useAgentIdState();
+
+  const handleCardClick = useCallback(
+    (id) => {
+      setPartialState({
+        consequenceFocus: state.consequenceFocus === id ? null : id,
+      });
+    },
+    [setPartialState, state.consequenceFocus],
+  );
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        minHeight: 0,
+        flexDirection: "column",
+        padding: 16,
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          color: C.textDim,
+          maxWidth: 620,
+        }}
+      >
+        This lens shows what the polyclinic can still do when different parts of
+        the Agent ID are present or missing. Each card is a response task; its
+        status reflects the current identity configuration.
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {CONSEQUENCE_PHASES.map((p) => {
+          const status = computePhaseStatus(p.id, state);
+          const isFocused = state.consequenceFocus === p.id;
+          const statusLabel =
+            status === "works" ? "WORKS" : status === "degrades" ? "DEGRADES" : "FAILS";
+          const statusColor =
+            status === "works" ? C.green : status === "degrades" ? C.yellow : C.red;
+
+          return (
+            <button
+              key={p.id}
+              onClick={() => handleCardClick(p.id)}
+              style={{
+                borderRadius: 10,
+                border: `1px solid ${isFocused ? C.blue : C.border}`,
+                background: isFocused ? C.blueGlow : C.card,
+                padding: "10px 12px",
+                textAlign: "left",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start",
+                  alignItems: "baseline",
                   marginBottom: 4,
                 }}
               >
-                <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: sel.color }}>{sel.label}</h2>
-                <button
-                  onClick={() => setSelected(null)}
+                <div
                   style={{
-                    background: "none",
-                    border: "none",
-                    color: C.textDim,
-                    cursor: "pointer",
-                    fontSize: 18,
-                    fontFamily: "inherit",
-                    padding: "0 4px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: C.textBright,
                   }}
                 >
-                  \u00d7
-                </button>
+                  {p.label}
+                </div>
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: statusColor,
+                  }}
+                >
+                  {statusLabel}
+                </span>
               </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: C.textDim,
+                  marginBottom: 2,
+                }}
+              >
+                In any deployment: short explanation of what this task means for
+                a service.
+              </div>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: C.textDim,
+                  opacity: 0.85,
+                }}
+              >
+                In this scenario: how the booking API would perform this task
+                given the current credential and actor configuration.
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Shared inspector ──
+
+function InspectorPanel() {
+  const { state, setPartialState } = useAgentIdState();
+  const selectedEntity = ENTITIES.find((e) => e.id === state.actorFocus) || null;
+
+  const hasFocus = !!selectedEntity || !!state.credentialFocus || !!state.consequenceFocus;
+
+  const handleDismiss = useCallback(() => {
+    setPartialState({
+      actorFocus: null,
+      credentialFocus: null,
+      consequenceFocus: null,
+    });
+  }, [setPartialState]);
+
+  return (
+    <div
+      style={{
+        width: hasFocus ? 360 : 0,
+        overflow: "hidden",
+        transition: "width 0.25s ease",
+        borderLeft: hasFocus ? `1px solid ${C.border}` : "none",
+        background: C.panel,
+        flexShrink: 0,
+      }}
+    >
+      {hasFocus && (
+        <div style={{ width: 360, padding: 20, overflowY: "auto", height: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: 4,
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  margin: 0,
+                  color: selectedEntity ? selectedEntity.color : C.textBright,
+                }}
+              >
+                {selectedEntity ? selectedEntity.label : "Focused element"}
+              </h2>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: C.textDim,
+                  marginTop: 2,
+                }}
+              >
+                Explanation of what this contributes, in any deployment and in
+                this scenario.
+              </div>
+            </div>
+            <button
+              onClick={handleDismiss}
+              style={{
+                background: "none",
+                border: "none",
+                color: C.textDim,
+                cursor: "pointer",
+                fontSize: 18,
+                fontFamily: "inherit",
+                padding: "0 4px",
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          {selectedEntity && (
+            <>
               <p
                 style={{
                   fontSize: 10,
@@ -644,7 +1339,7 @@ export default function ArchV4() {
                   lineHeight: 1.6,
                 }}
               >
-                {sel.desc}
+                {selectedEntity.desc}
               </p>
 
               <div style={{ marginBottom: 16 }}>
@@ -671,11 +1366,11 @@ export default function ArchV4() {
                     lineHeight: 1.6,
                   }}
                 >
-                  {sel.contribution}
+                  {selectedEntity.contribution}
                 </div>
               </div>
 
-              {sel.benefitsActor && sel.benefitsActor.length > 0 && (
+              {selectedEntity.benefitsActor && selectedEntity.benefitsActor.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                   <div
                     style={{
@@ -697,12 +1392,15 @@ export default function ArchV4() {
                       overflow: "hidden",
                     }}
                   >
-                    {sel.benefitsActor.map((b, i) => (
+                    {selectedEntity.benefitsActor.map((b, i) => (
                       <div
                         key={i}
                         style={{
                           padding: "10px 14px",
-                          borderBottom: i < sel.benefitsActor.length - 1 ? `1px solid ${C.border}` : "none",
+                          borderBottom:
+                            i < selectedEntity.benefitsActor.length - 1
+                              ? `1px solid ${C.border}`
+                              : "none",
                         }}
                       >
                         <div
@@ -730,65 +1428,234 @@ export default function ArchV4() {
                 </div>
               )}
 
-              {sel.benefitsEcosystem && sel.benefitsEcosystem.length > 0 && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: C.orange,
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                      marginBottom: 8,
-                    }}
-                  >
-                    Benefits to the Ecosystem
-                  </div>
-                  <div
-                    style={{
-                      borderRadius: 8,
-                      background: C.bg,
-                      border: `1px solid ${C.border}`,
-                      overflow: "hidden",
-                    }}
-                  >
-                    {sel.benefitsEcosystem.map((b, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          padding: "10px 14px",
-                          borderBottom: i < sel.benefitsEcosystem.length - 1 ? `1px solid ${C.border}` : "none",
-                        }}
-                      >
+              {selectedEntity.benefitsEcosystem &&
+                selectedEntity.benefitsEcosystem.length > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: C.orange,
+                        textTransform: "uppercase",
+                        letterSpacing: 1,
+                        marginBottom: 8,
+                      }}
+                    >
+                      Benefits to the Ecosystem
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 8,
+                        background: C.bg,
+                        border: `1px solid ${C.border}`,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {selectedEntity.benefitsEcosystem.map((b, i) => (
                         <div
+                          key={i}
                           style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: C.text,
-                            marginBottom: 3,
+                            padding: "10px 14px",
+                            borderBottom:
+                              i < selectedEntity.benefitsEcosystem.length - 1
+                                ? `1px solid ${C.border}`
+                                : "none",
                           }}
                         >
-                          {b.title}
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: C.text,
+                              marginBottom: 3,
+                            }}
+                          >
+                            {b.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: C.textDim,
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            {b.detail}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: C.textDim,
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          {b.detail}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+            </>
+          )}
+
+          {!selectedEntity && (
+            <div
+              style={{
+                fontSize: 10,
+                color: C.textDim,
+                lineHeight: 1.6,
+              }}
+            >
+              Use the ecosystem, credential, or consequence views to focus on an
+              actor, credential section, or response task. Their contribution
+              and scenario-specific role will appear here.
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
+}
+
+// ── Bottom strip: current service decision summary ──
+
+function computeServiceOutcome(state) {
+  const { actorToggles } = state;
+  const hasProvider = !!actorToggles.provider;
+  const hasDeployer = !!actorToggles.deployer;
+  const hasInstance = !!actorToggles.instance;
+
+  if (hasProvider && hasDeployer && hasInstance) {
+    return { label: "ALLOW WITH CONDITIONS", severity: "info" };
+  }
+
+  if (hasProvider && (hasDeployer || hasInstance)) {
+    return { label: "CHALLENGE / TIGHTEN SCOPE", severity: "warn" };
+  }
+
+  if (hasProvider || hasDeployer || hasInstance) {
+    return { label: "LIMITED ACCESS ONLY", severity: "warn" };
+  }
+
+  return { label: "DENY / MANUAL REVIEW", severity: "error" };
+}
+
+function BottomStrip() {
+  const { state, setPartialState } = useAgentIdState();
+  const outcome = computeServiceOutcome(state);
+
+  const color =
+    outcome.severity === "info"
+      ? C.green
+      : outcome.severity === "warn"
+      ? C.yellow
+      : C.red;
+
+  const nextLabel =
+    state.currentView === "ecosystem"
+      ? "Inspect in credential →"
+      : state.currentView === "credential"
+      ? "See what fails in consequences →"
+      : "Reveal missing assurances →";
+
+  const handleNext = useCallback(() => {
+    if (state.currentView === "ecosystem") {
+      setPartialState({ currentView: "credential" });
+    } else if (state.currentView === "credential") {
+      setPartialState({ currentView: "consequences" });
+    } else {
+      setPartialState({ currentView: "credential" });
+    }
+  }, [setPartialState, state.currentView]);
+
+  const missing = [];
+  if (!state.actorToggles.provider) missing.push("provider");
+  if (!state.actorToggles.deployer) missing.push("deployer");
+  if (!state.actorToggles.instance) missing.push("instance");
+
+  return (
+    <div
+      style={{
+        borderTop: `1px solid ${C.border}`,
+        padding: "8px 20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        fontSize: 10,
+        background: C.panel,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 600,
+            color: color,
+          }}
+        >
+          Service outcome: {outcome.label}
+        </div>
+        <div
+          style={{
+            color: C.textDim,
+          }}
+        >
+          Missing: {missing.length ? missing.join(", ") : "none — full chain visible"}
+        </div>
+      </div>
+      <button
+        onClick={handleNext}
+        style={{
+          borderRadius: 999,
+          border: `1px solid ${C.blue}`,
+          background: C.blueGlow,
+          color: C.textBright,
+          padding: "6px 14px",
+          fontSize: 10,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          flexShrink: 0,
+        }}
+      >
+        {nextLabel}
+      </button>
+    </div>
+  );
+}
+
+// ── Main shell: apply shared state + pick lens ──
+
+export default function ArchV4() {
+  return (
+    <AgentIdStateProvider>
+      <div
+        style={{
+          background: C.bg,
+          minHeight: "100vh",
+          color: C.text,
+          fontFamily: "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <TopControlBar />
+        <ViewTabs />
+        <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <LensSwitcher />
+          </div>
+          <InspectorPanel />
+        </div>
+        <BottomStrip />
+      </div>
+    </AgentIdStateProvider>
+  );
+}
+
+function LensSwitcher() {
+  const {
+    state: { currentView },
+  } = useAgentIdState();
+
+  if (currentView === "credential") return <CredentialView />;
+  if (currentView === "consequences") return <ConsequencesView />;
+  return <EcosystemView />;
 }
 
