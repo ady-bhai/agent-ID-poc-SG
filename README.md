@@ -23,6 +23,9 @@ Existing protocols (OAuth 2.0, OpenID Connect, MCP) each answer parts of this qu
 
 This PoC operationalizes the [composite agent identity credential](https://aisafety.sg) proposed in SASH's working draft, grounded in a healthcare booking scenario aligned with Singapore's [Model AI Governance Framework for Agentic AI](https://www.imda.gov.sg/) (Jan 2026).
 
+
+<img width="655" height="369" alt="Screenshot 2026-03-27 at 11 00 08 AM" src="https://github.com/user-attachments/assets/239a65dc-650d-4fd5-9225-1b953ada0bd7" />
+
 ---
 
 ## What you'll see
