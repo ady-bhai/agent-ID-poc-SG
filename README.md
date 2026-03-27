@@ -6,6 +6,9 @@ Built at [SASH](https://aisafety.sg) (Singapore AI Safety Hub) as part of an [ER
 
 **[→ Try the live demo](https://ady-bhai.github.io/agent-ID-poc-SG/)**
 
+<img width="717" height="404" alt="Screenshot 2026-03-27 at 10 57 29 AM" src="https://github.com/user-attachments/assets/6bae38d4-1d6c-4008-973a-24125f77d570" />
+
+
 ---
 
 ## Why this exists
