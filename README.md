@@ -6,8 +6,9 @@ Built at [SASH](https://aisafety.sg) (Singapore AI Safety Hub) as part of an [ER
 
 **[→ Try the live demo](https://ady-bhai.github.io/agent-ID-poc-SG/)**
 
-<img width="717" height="404" alt="Screenshot 2026-03-27 at 10 57 29 AM" src="https://github.com/user-attachments/assets/6bae38d4-1d6c-4008-973a-24125f77d570" />
-
+<p align="center">
+  <img width="717" height="404" alt="The Mechanism: contributors sign different sections of a composite Agent ID, which a service uses to make graduated trust decisions" src="https://github.com/user-attachments/assets/6bae38d4-1d6c-4008-973a-24125f77d570" />
+</p>
 
 ---
 
@@ -19,12 +20,15 @@ Without this information, services face a binary choice: block all agents, or ac
 
 Existing protocols (OAuth 2.0, OpenID Connect, MCP) each answer parts of this question, but no single standard carries safety attestations, deployer accountability, and incident response endpoints in one credential. And the credential fields most useful for governance — model provenance, safety testing, accountability contacts — have the weakest market incentives for voluntary disclosure.
 
-<img width="587" height="334" alt="Screenshot 2026-03-27 at 10 58 34 AM" src="https://github.com/user-attachments/assets/915433b8-bd07-41af-9d74-8e990fa59b9c" />
+<p align="center">
+  <img width="587" height="334" alt="Protocol Landscape: no single existing standard answers all five service questions" src="https://github.com/user-attachments/assets/915433b8-bd07-41af-9d74-8e990fa59b9c" />
+</p>
 
 This PoC operationalizes the [composite agent identity credential](https://aisafety.sg) proposed in SASH's working draft, grounded in a healthcare booking scenario aligned with Singapore's [Model AI Governance Framework for Agentic AI](https://www.imda.gov.sg/) (Jan 2026).
 
-
-<img width="655" height="369" alt="Screenshot 2026-03-27 at 11 00 08 AM" src="https://github.com/user-attachments/assets/239a65dc-650d-4fd5-9225-1b953ada0bd7" />
+<p align="center">
+  <img width="655" height="369" alt="Market Incentive Gap: markets supply operational metadata, but governance needs accountability metadata" src="https://github.com/user-attachments/assets/239a65dc-650d-4fd5-9225-1b953ada0bd7" />
+</p>
 
 ---
 
@@ -61,7 +65,6 @@ Each verification question must be answered by a different supply-chain actor. N
 ---
 
 ## Run locally
-
 ```bash
 git clone https://github.com/ady-bhai/agent-ID-poc-SG.git
 cd agent-ID-poc-SG
@@ -91,17 +94,7 @@ This PoC was built during an 8-week ERA Cambridge research fellowship (Feb–Mar
 - **Alan Chan's** foundational work on IDs for AI systems and infrastructure for AI agents (GovAI)
 - **Singapore's MGF** for Agentic AI (IMDA, Jan 2026)
 
-The demo was presented to Singapore AISI stakeholders in March 2026 and is being used to inform ongoing discussions about agent identity infrastructure.
-
-### What this is
-
-A visual, interactive proof of concept. It demonstrates *why* composite agent identity matters by making the consequences of missing identity sections legible. It is not a production implementation, a protocol specification, or a cryptographic library.
-
-### What this is not
-
-- Not a finished product — it's a proof that the design space is tractable
-- Not a substitute for the written research — it operationalizes it
-- Does not solve adoption, domain prioritization, or the political economy of standards-setting
+The demo was presented to inernal stakeholders for SASH. It is being used to inform ongoing discussions about agent identity infrastructure It was referenced during a GovTech meeting and will be shown to AISI stakeholders in early April 2026.
 
 ---
 
