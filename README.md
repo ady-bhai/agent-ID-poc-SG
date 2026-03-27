@@ -1,17 +1,58 @@
 # Agent IDs Singapore — Proof of Concept
 
-**Visual, Interactive POC of Agent IDs**
+An interactive demo that makes the case for composite AI agent identity by showing what a service gains — and loses — when different parts of the credential are present or missing.
+
+Built at [SASH](https://aisafety.sg) (Singapore AI Safety Hub) as part of an [ERA Cambridge](https://www.eracambridge.org/) research fellowship, in collaboration with Singapore's IMDA (Infocomm Media Development Authority).
+
+**[→ Try the live demo](https://ady-bhai.github.io/agent-ID-poc-SG/)**
 
 ---
 
-## Quick Start
+## Why this exists
 
-- **New collaborator?** Start with [`00-PROJECT-BRIEFING.md`](./00-PROJECT-BRIEFING.md) — the full onboarding document.
-- **Building?** Week 1 focus: Agent ID schema v0.1, architecture decisions, dev setup.
+When an AI agent requests access to sensitive information — say, patient appointment data from a polyclinic — the receiving service currently has no standardized way to verify who built the agent, whether it's been safety-tested, or who's accountable if something goes wrong.
 
-## Run the PoC locally
+Without this information, services face a binary choice: block all agents, or accept unknown risk.
 
-To run the interactive demo on your machine:
+Existing protocols (OAuth 2.0, OpenID Connect, MCP) each answer parts of this question, but no single standard carries safety attestations, deployer accountability, and incident response endpoints in one credential. And the credential fields most useful for governance — model provenance, safety testing, accountability contacts — have the weakest market incentives for voluntary disclosure.
+
+This PoC operationalizes the [composite agent identity credential](https://aisafety.sg) proposed in SASH's working draft, grounded in a healthcare booking scenario aligned with Singapore's [Model AI Governance Framework for Agentic AI](https://www.imda.gov.sg/) (Jan 2026).
+
+---
+
+## What you'll see
+
+The demo is organized around three views. They're designed to be explored in order:
+
+### View 1 · Ecosystem — *Who contributes what*
+
+Click on any actor in the supply chain — Developer, Provider, Deployer, Agent Instance — to see what they contribute to the credential, what incentive they have to participate, and what the ecosystem needs from them.
+
+**[→ Open Ecosystem view](https://ady-bhai.github.io/agent-ID-poc-SG/#view1-ecosystem)**
+
+### View 2 · Credential — *What the agent carries*
+
+The composite credential, reframed as question-answer pairs. Instead of `provider_signature: [hash]`, the view asks: *Who built this agent?* → Verified: MedBot SG. Each section is independently signed by the actor who originated it — Provider, Deployer, or an independent certifier.
+
+**[→ Open Credential view](https://ady-bhai.github.io/agent-ID-poc-SG/#arch)**
+
+### View 3 · Consequences — *What fails without it*
+
+Toggle identity presets — Full Agent ID, No Deployer Info, No Safety Certification, No Verifiable Agent ID — and watch specific incident response phases pass or fail. The key insight: missing credential sections don't cause gradual degradation. They cause specific phases to terminate entirely.
+
+**[→ Open Consequences view](https://ady-bhai.github.io/agent-ID-poc-SG/#incident)**
+
+---
+
+## The scenario
+
+A healthcare booking agent, built by **MedBot SG** (provider) on **Anthropic's Claude** (developer), deployed by **Raffles Medical** (deployer), requests patient appointment availability from a **polyclinic's API** (service).
+
+Each verification question must be answered by a different supply-chain actor. No single entity can provide the full picture — requiring a composite identity credential.
+
+---
+
+## Run locally
 
 ```bash
 git clone https://github.com/ady-bhai/agent-ID-poc-SG.git
@@ -20,40 +61,48 @@ npm install
 npm run dev -- --port 5180
 ```
 
-Then open one of these URLs in your browser:
+Then open:
+- `http://localhost:5180/#view1-ecosystem` — Ecosystem
+- `http://localhost:5180/#arch` — Credential
+- `http://localhost:5180/#incident` — Consequences
 
-- `http://localhost:5180/#view1-ecosystem` — **View 1 · Ecosystem** (`arch_v4`): healthcare booking scenario, who contributes what to the Agent ID.
-- `http://localhost:5180/#incident` — **View 3 · Incident Explorer** (`incident_v5`): incident response narratives across identity levels.
-- `http://localhost:5180/#arch` — **View 2 · Reference Architecture** (`arch_v3`): higher-level system diagram.
+## Deployment
 
-## Deployment (GitHub Pages)
+The repo deploys to GitHub Pages at:
+**https://ady-bhai.github.io/agent-ID-poc-SG/**
 
-The repo is configured to deploy to GitHub Pages at:
+A GitHub Actions workflow in `.github/workflows/deploy-pages.yml` builds and publishes the `dist/` folder on every push to `main`.
 
-- `https://ady-bhai.github.io/agent-ID-poc-SG/`
+---
 
-The Vite `base` path is set so the built app works from that URL (`/agent-ID-poc-SG/`). A GitHub Actions workflow in `.github/workflows/deploy-pages.yml` builds the site and publishes the `dist/` folder on every push to `main`. After Pages is enabled in the repo settings, you can share links like:
+## Project context
 
-- `https://ady-bhai.github.io/agent-ID-poc-SG/#view1-ecosystem`
-- `https://ady-bhai.github.io/agent-ID-poc-SG/#incident`
-- `https://ady-bhai.github.io/agent-ID-poc-SG/#arch`
+This PoC was built during an 8-week ERA Cambridge research fellowship (Feb–Mar 2026). It draws on:
 
-## Project Structure (Planned)
+- **SASH working draft** on agent identity for Singapore (Sam Boger & Amin Oueslati)
+- **Alan Chan's** foundational work on IDs for AI systems and infrastructure for AI agents (GovAI)
+- **Singapore's MGF** for Agentic AI (IMDA, Jan 2026)
 
-```
-AGENT IDs SINGAPORE/
-├── 00-PROJECT-BRIEFING.md    # Full project briefing (start here)
-├── README.md                 # This file
-├── docs/                     # Stakeholder materials, specs, policy briefs
-├── schema/                   # Agent ID schema v0.1, JSON schemas
-├── agent/                    # MCP client (scripted agent instance)
-├── service/                  # MCP server + trust decision engine
-├── registry/                 # Express.js REST API + JSON backend
-├── dashboard/                # React + Tailwind visualization (primary deliverable)
-└── logs/                     # Append-only log store output
-```
+The demo was presented to Singapore AISI stakeholders in March 2026 and is being used to inform ongoing discussions about agent identity infrastructure.
 
-## Key Documents (Ingested)
+### What this is
 
-- **Source PDFs** — See [`docs/00-SOURCE-DOCUMENTS-INDEX.md`](./docs/00-SOURCE-DOCUMENTS-INDEX.md) for paths. Includes: Aditya Singapore Masterdoc (5, 6), SG-agent-IDs-working-draft (19, 20, 21), OpenID 2510.25819v1.
-- **Synthesis + LLM analysis evaluation** — [`docs/01-SYNTHESIS-AND-LLM-ANALYSIS-EVALUATION.md`](./docs/01-SYNTHESIS-AND-LLM-ANALYSIS-EVALUATION.md) — Cross-references source docs, validates LLM recommendations, adoption table.
+A visual, interactive proof of concept. It demonstrates *why* composite agent identity matters by making the consequences of missing identity sections legible. It is not a production implementation, a protocol specification, or a cryptographic library.
+
+### What this is not
+
+- Not a finished product — it's a proof that the design space is tractable
+- Not a substitute for the written research — it operationalizes it
+- Does not solve adoption, domain prioritization, or the political economy of standards-setting
+
+---
+
+## For collaborators
+
+- **New to the project?** Start with [`00-PROJECT-BRIEFING.md`](./00-PROJECT-BRIEFING.md) for the full onboarding doc.
+- **Want to contribute?** The three views are modular JSX components. The content in each actor's panel is defined in the component files (`arch_v4.jsx`, `incident_v5.jsx`, `arch_v3.jsx`).
+- **Questions?** Reach out to [aditya.mehta@berkeley.edu](mailto:aditya.mehta@berkeley.edu)
+
+---
+
+*Mentee: Aditya Mehta · Mentor: Sam Boger · SASH × ERA Cambridge, 2026*
