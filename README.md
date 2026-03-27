@@ -94,7 +94,7 @@ This PoC was built during an 8-week ERA Cambridge research fellowship (Feb–Mar
 - **Alan Chan's** foundational work on IDs for AI systems and infrastructure for AI agents (GovAI)
 - **Singapore's MGF** for Agentic AI (IMDA, Jan 2026)
 
-The demo was presented to inernal stakeholders for SASH. It is being used to inform ongoing discussions about agent identity infrastructure It was referenced during a GovTech meeting and will be shown to AISI stakeholders in early April 2026.
+The demo was presented to internal stakeholders for SASH. It is being used to inform ongoing discussions about agent identity infrastructure. It was referenced during a GovTech meeting and will be shown to AISI stakeholders in early April 2026.
 
 ---
 
