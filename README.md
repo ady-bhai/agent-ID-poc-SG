@@ -19,6 +19,8 @@ Without this information, services face a binary choice: block all agents, or ac
 
 Existing protocols (OAuth 2.0, OpenID Connect, MCP) each answer parts of this question, but no single standard carries safety attestations, deployer accountability, and incident response endpoints in one credential. And the credential fields most useful for governance — model provenance, safety testing, accountability contacts — have the weakest market incentives for voluntary disclosure.
 
+<img width="587" height="334" alt="Screenshot 2026-03-27 at 10 58 34 AM" src="https://github.com/user-attachments/assets/915433b8-bd07-41af-9d74-8e990fa59b9c" />
+
 This PoC operationalizes the [composite agent identity credential](https://aisafety.sg) proposed in SASH's working draft, grounded in a healthcare booking scenario aligned with Singapore's [Model AI Governance Framework for Agentic AI](https://www.imda.gov.sg/) (Jan 2026).
 
 ---
